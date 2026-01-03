@@ -2,77 +2,102 @@
 # MATERIA: MATEMÁTICAS DISCRETAS.
 # Archivo: pruebas.py
 
-#INTEGRANTES DEL EQUIPO:
-#- BRANDON ARENAS GUZMÁN.
-#- JOHAN ALEJANDRO CABAÑAS BRINGAS.
-#- AARON LEON CRUZ.
-#- JESUS ANTONIO ROJAS RODRÍGUEZ.
-#- AZAEL ALEJANDRO VAZQUEZ SEGURA.
+# INTEGRANTES DEL EQUIPO:
+# - BRANDON ARENAS GUZMÁN.
+# - JOHAN ALEJANDRO CABAÑAS BRINGAS.
+# - AARON LEON CRUZ.
+# - JESUS ANTONIO ROJAS RODRÍGUEZ.
+# - AZAEL ALEJANDRO VAZQUEZ SEGURA.
 
-"""Esta es la tercera parte. De ese modo, nos centraremos en la parte de comprobación unitaria del proyecto."""
+"""
+Módulo de Pruebas Unitarias.
+Verifica la corrección matemática de las funciones implementadas en numeros.py.
+"""
 
-# Importampos el framework unittest para crear y ejecutar pruebas e importamos el módulo numeros que contiene las funciones matemáticas.
 import unittest
 import numeros
 
-"""Este archivo constituye el módulo de pruebas unitarias. Su función es garantizar la 'corrección matemática' y la 'calidad del código', verificando que
-las funciones puras en numeros.py devuelvan resultados exactos antes de ser visualizados en la interfaz de usuario."""
-
-
-# Definimos una clase de pruebas que hereda de unittest.TestCase. Así pues, todos los métodos que empiezen con test_ se ejecutaran como pruebas individuales. # Importamos el framework unittest para crear y ejecutar pruebas e importamos el módulo numeros que contine las funciones matemáticas a probar.
 class TestDivisibilidad(unittest.TestCase):
 
-# Llamamos a la función con valores negativos, desempaquetamos el cociente q, residuo r e ignoramos el texto explicativo con _, usamos assertEqual para
-# verificar que q == -3 y r == 1 con mensaje de error personalizado si falla y verificamos manualmente la ecuación fundamental:
-# a = b*q + r → -14 = 5*(-3) + 1.
-    def test_algoritmo_division(self):
-        """Prueba el Teorema de la División con el caso negativo del PDF."""
-        # Caso: a = -14, b = 5 => q = -3, r = 1.
+    # --- PRUEBAS DE DIVISIÓN ---
+
+    def test_algoritmo_division_negativo(self):
+        """Prueba a = -14, b = 5 => q = -3, r = 1 (0 <= r < |b|)"""
         q, r, _ = numeros.algoritmo_division(-14, 5)
-        self.assertEqual(q, -3, "El cociente q debe ser -3")
-        self.assertEqual(r, 1, "El residuo r debe ser 1 y cumplir 0 <= r < b")
-        # Verificación de la igualdad a = bq + r.
+        self.assertEqual(q, -3)
+        self.assertEqual(r, 1)
+        # Verificación: a = bq + r
         self.assertEqual(5 * (-3) + 1, -14)
 
-# Probamos la conversión de 255 decimal a hexadecimal que debe ser "FF", verificamos la representación final (rep) y verifica que la forma polinómica
-# contenga "15(16^1)" porque F = 15.
+    def test_algoritmo_division_divisor_negativo(self):
+        """Prueba a = 20, b = -3.
+        Si b < 0, |b| = 3. 0 <= r < 3.
+        20 = (-3)(-6) + 2 --> q=-6, r=2.
+        """
+        q, r, _ = numeros.algoritmo_division(20, -3)
+        self.assertEqual(20, -3 * q + r)
+        self.assertTrue(0 <= r < abs(-3))
 
-    def test_cambio_base_hexadecimal(self):
-        """Verifica la conversión a base 16 y el uso de símbolos A-F."""
-        # Caso: 255 en base 16 es FF.
+    def test_division_cero_error(self):
+        """Debe lanzar ValueError si b = 0"""
+        with self.assertRaises(ValueError):
+            numeros.algoritmo_division(10, 0)
+
+    # --- PRUEBAS DE CAMBIO DE BASE ---
+
+    def test_cambio_base_hex(self):
+        """255 en base 16 es 'FF'"""
         rep, pol, _ = numeros.cambio_base(255, 16)
         self.assertEqual(rep, "FF")
-        self.assertIn("15(16^1)", pol) # Aqui verificamos la representación polinomial.
+        # Revisamos parte de la cadena polinomial
+        self.assertIn("15(16^0)", pol) # F = 15
 
-# Probamos que la función lance una excepción ValueError cuando la base está fuera del rango permitido (1 o 17 en este caso). Usamos assertRaises para
-# capturar y validar la excepción esperada.
-    def test_rango_bases_prohibidas(self):
-        """Asegura que el programa cumpla la restricción 2 <= b <= 16."""
+    def test_cambio_base_binario(self):
+        """5 en base 2 es '101'"""
+        rep, pol, _ = numeros.cambio_base(5, 2)
+        self.assertEqual(rep, "101")
+
+    def test_cambio_base_limites(self):
+        """Base 1 y Base 17 deben fallar"""
         with self.assertRaises(ValueError):
-            numeros.cambio_base(100, 17)
+            numeros.cambio_base(10, 1)
         with self.assertRaises(ValueError):
-            numeros.cambio_base(100, 1)
-# Ahora verificamos el valor del MCD, aseguramos que haya al menos un paso en la lista de reconstrucción (recon) y verificamos la combinación lineal:
-# 444*x + 370*y == 74.
-    def test_mcd_euclides_reconstruccion(self):
-        """Valida el MCD y la existencia de pasos de reconstrucción."""
-        # Caso: MCD(444, 370) = 74.
-        mcd, x, y, divs, recon = numeros.euclides_extendido(444, 370)
+            numeros.cambio_base(10, 17)
+
+    # --- PRUEBAS DE MCD Y EUCLIDES ---
+
+    def test_mcd_euclides(self):
+        """MCD(444, 370) = 74"""
+        mcd, x, y, _, _ = numeros.euclides_extendido(444, 370)
         self.assertEqual(mcd, 74)
-        self.assertTrue(len(recon) > 0, "Debe existir una secuencia de reconstrucción")
-        # Verificamos la combinación lineal: d = ax + by.
-        self.assertEqual(444*x + 370*y, 74)
-# Para ir cerrando, probamos indirectamente la condición de existencia de soluciones diofánticas, calculamos el MCD de 6 y 9 que debe ser 3 y verificamos que
-# 5 % 3 != 0 (condición que indicara que "no hay soluciones enteras").
-    def test_ecuacion_diofantica_sin_solucion(self):
-        """Verifica que se identifique correctamente cuándo no hay solución."""
-        # Caso: 6x + 9y = 5 (MCD es 3, y 3 no divide a 5).
-        d, x0, y0, divs, recon = numeros.euclides_extendido(6, 9)
-        # Y como sabemos, la lógica de solución (c % d != 0) se prueba validando el MCD.
-        self.assertEqual(d, 3)
-        self.assertNotEqual(5 % d, 0, "5 no es divisible entre el MCD 3")
+        # Identidad de Bezout: 444x + 370y = 74
+        self.assertEqual(444 * x + 370 * y, 74)
+
+    def test_mcd_negativos(self):
+        """MCD debe ser positivo incluso si inputs son negativos"""
+        # MCD(-12, -8) = 4
+        mcd, x, y, _, _ = numeros.euclides_extendido(-12, -8)
+        self.assertEqual(mcd, 4)
+        self.assertEqual(-12 * x + -8 * y, 4)
+
+    # --- PRUEBAS DE ECUACIONES DIOFÁNTICAS ---
+
+    def test_diofantica_con_solucion(self):
+        """5x + 3y = 10. MCD(5,3)=1, 1|10 -> Sí hay solución"""
+        res = numeros.resolver_diofantica(5, 3, 10)
+        self.assertTrue(res['tiene_solucion'])
+        self.assertEqual(res['mcd'], 1)
+        # Validar solución particular
+        x0 = res['x0']
+        y0 = res['y0']
+        self.assertEqual(5*x0 + 3*y0, 10)
+
+    def test_diofantica_sin_solucion(self):
+        """6x + 9y = 5. MCD(6,9)=3. 3 no divide a 5."""
+        res = numeros.resolver_diofantica(6, 9, 5)
+        self.assertFalse(res['tiene_solucion'])
+        self.assertEqual(res['mcd'], 3)
 
 if __name__ == "__main__":
-    # Finalmente, esto descubre y ejecuta automáticamente todas las pruebas de la clase, mostrando un reporte detallado , y obtendremos un: ok/fail.
-    print("Iniciando pruebas unitarias de lógica matemática...")
+    print("Ejecutando pruebas unitarias...")
     unittest.main()

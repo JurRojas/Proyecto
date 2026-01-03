@@ -2,169 +2,246 @@
 # MATERIA: MATEMÁTICAS DISCRETAS.
 # Archivo: numeros.py
 
-#INTEGRANTES DEL EQUIPO:
-#- BRANDON ARENAS GUZMÁN.
-#- JOHAN ALEJANDRO CABAÑAS BRINGAS.
-#- AARON LEON CRUZ.
-#- JESUS ANTONIO ROJAS RODRÍGUEZ.
-#- AZAEL ALEJANDRO VAZQUEZ SEGURA.
+# INTEGRANTES DEL EQUIPO:
+# - BRANDON ARENAS GUZMÁN.
+# - JOHAN ALEJANDRO CABAÑAS BRINGAS.
+# - AARON LEON CRUZ.
+# - JESUS ANTONIO ROJAS RODRÍGUEZ.
+# - AZAEL ALEJANDRO VAZQUEZ SEGURA.
 
+"""
+Este módulo contiene la lógica matemática pura del proyecto.
+Incluye funciones para el algoritmo de la división, cambio de base,
+algoritmo de Euclides (MCD) y resolución de ecuaciones diofánticas lineales.
+"""
 
-"""Este proyecto se divide en tres partes. De ese modo, en esta primera parte nos centraremos en la lógica pura del proyecto."""
+from typing import Tuple, List, Dict, Any, Union
 
 # DIVISIÓN:
 
-# Primero definimos la función que recibe el dividendo a y el divisor b.
-def algoritmo_division(a, b):
+def algoritmo_division(a: int, b: int) -> Tuple[int, int, List[str]]:
+    """
+    Calcula el cociente y el residuo de la división entera a / b.
+    Garantiza que el residuo r cumpla 0 <= r < |b|.
     
-    # Ahora verificamos si el divisor es menor o igual a cero.
-    if b <= 0:
-        
-        # Si en dado caso b no es positivo lanza un error, ya que por el terorema del algoritmo de la división b > 0.
-        raise ValueError("El divisor 'b' debe ser mayor a 0.")
+    Args:
+        a (int): Dividendo.
+        b (int): Divisor (debe ser distinto de 0).
+
+    Returns:
+        Tuple[int, int, List[str]]: Cociente (q), Residuo (r), Lista de pasos explicativos.
+
+    Raises:
+        ValueError: Si b es 0.
+    """
+    if b == 0:
+        raise ValueError("El divisor 'b' no puede ser 0.")
     
-    # Posteriormente, generamos una función que devuelve el cociente (q) y el residuo (r).
-    q, r = divmod(a, b)
+    # Manejo de negativos y residuo positivo
+    q = a // b
+    r = a % b
     
-    # Y creamos un caso por si el residuo es negativo que suele suceder cuando 'a' es negativo.
+    # En Python el operador % ya retorna el residuo con el mismo signo que el divisor (o cero).
+    # Para el algoritmo de la división euclidiana estricta, queremos 0 <= r < |b|.
+    # Sin embargo, a // b y a % b en Python ya manejan 'floor division'.
+    # Si b > 0: r está en [0, b).
+    # Si b < 0: r está en (b, 0].
+    # Ajustamos para que r sea siempre no negativo si se requiere definición estricta 0 <= r < |b|.
+    
     if r < 0:
-        
-        # Ajustamos el residuo para que sea positivo.
         r += abs(b)
-        
-        # Y posteriormente, recalculamos el cociente basado en el nuevo residuo.
+        q += 1 if b < 0 else -1 # Ajuste depende del signo, pero mejor recalculamos con la formula
+        # Recalculamos q para asegurar a = b*q + r
         q = (a - r) // b
-        
-    # Ahora, para mostrar los resultados creamos una cadena de texto multílinea formateando los resultados para que el usuario vea la comprobación:
-    # a = b*q + r
-    proceso = (
-        f">>> RESULTADOS:\n\n"
-        f"Cociente (q) = {q}\nResiduo (r) = {r}\n\n"
-        f"• Por algoritmo de la división sabemos que q, r son únicos tales que: a = bq + r con 0 <= r < b\n"
-        f"• Los datos que tenemos son: a = {a}, b = {b}, q = {q}, r = {r}\n"
-        f"• Entonces obtenemos: {a} = {b} x {q} + {r} con 0 <= {r} < {b}\n\n"
-        f"Verificación: {a} = {b} x {q} + {r}\n"
-        f"              {a} = {b*q} + {r}\n"
-        f"              ∴ {a} = {b*q+r}"
-    )
+
+    pasos = [
+        f"Dividendo (a) = {a}, Divisor (b) = {b}",
+        f"Aplicando algoritmo: {a} = {b}(q) + r",
+        f"Cociente (q) = {q}",
+        f"Residuo (r) = {r}",
+        f"Verificación: {b} * ({q}) + {r} = {b*q} + {r} = {b*q + r}"
+    ]
     
-    # Y finalmente, devolvimos los valores calculados y el texto del procedimiento.
-    return q, r, proceso
+    return q, r, pasos
 
 # CAMBIO DE BASE:
 
-# Con el cambio de base empezamos definiendo la función que recibe el número en base decimal 'a' y la base 'b'.
-def cambio_base(a, b):
+def cambio_base(a: int, base: int) -> Tuple[str, str, List[str]]:
+    """
+    Convierte un número decimal positivo a una base dada (2 <= base <= 16).
 
-    # Luego validamos si 'b' estaba en el rango permitido (2 <= b <= 16).
-    if not (2 <= b <= 16):
+    Args:
+        a (int): Número decimal positivo.
+        base (int): Base destino.
 
-        # Si en dado caso 'b' no cumple con la condición, se lanza un error que especifica que la base no cumple con lo pedido.
+    Returns:
+        Tuple[str, str, List[str]]: Representación en la nueva base, Polinomio, Lista de pasos.
+
+    Raises:
+        ValueError: Si la base no está entre 2 y 16 o si a < 0.
+    """
+    if not (2 <= base <= 16):
         raise ValueError("La base debe estar entre 2 y 16.")
+    if a < 0:
+        raise ValueError("El número debe ser no negativo.")
+    
+    if a == 0:
+        return "0", "0", ["0 = 0"]
 
-    # Esto es un caso especial, pues si el número es 0 termina rápido.
-    if a == 0: return "0", "0", ["0 = 0"]
-
-    # Ahora, creamos un diccionario de caracteres para beses mayores a 10. 
-    digitos = "0123456789ABCDEF"
-
-    # Posteriormente, inicializamos listas para guardar los resultados y una copia de 'a' para no modificar la original.
+    digitos_map = "0123456789ABCDEF"
     residuos = []
     temp_a = a
     pasos = []
 
-    # Creamos un bucle que se ejecutara mientras el cociente sea mayor a 0 (para realizar las divisiones sucesivas). 
     while temp_a > 0:
-
-        # En donde dividimos el número actual por la base.
-        q, r = divmod(temp_a, b)
-
-        # Guardamos la operación actual en una lista para mostrarla despues. 
-        pasos.append(f"{temp_a} = {b}({q}) + {r}  -> Residuo: {digitos[r]}")
-
-        # Y guardamos el residuo.
+        q, r = divmod(temp_a, base)
+        pasos.append(f"{temp_a} = {base}({q}) + {r}  -> Dígito: {digitos_map[r]}")
         residuos.append(r)
-
-        # Ahora, el cociente de esta división se convierte en el dividendo de la siguiente y haci hasta cumplir con la condición ya dicha.
         temp_a = q
 
-    # Para obtener el resultado unimos los residuos en orden inverso (de abajo hacia arriba).
-    rep = "".join(digitos[residuos[i]] for i in range(len(residuos)-1, -1, -1))
+    # Construir resultado
+    res_str = "".join(digitos_map[r] for r in reversed(residuos))
+    
+    pol_terms = []
+    for i, r in enumerate(residuos):
+        if r != 0: # Opcional: mostrar solo términos no nulos
+            pol_terms.append(f"{r}({base}^{i})")
+    
+    polinomio = " + ".join(reversed(pol_terms)) if pol_terms else "0"
 
-    # Creamos la cadena que muestra la expanción polinomial.
-    polinomio = " + ".join([f"{residuos[i]}({b}^{i})" for i in range(len(residuos)-1, -1, -1)])
+    return res_str, polinomio, pasos
 
-    # Y finalmente, devolvimos los resultados.
-    return rep, polinomio, pasos
+# MCD Y EUCLIDES EXTENDIDO:
 
-# Para el MCD definimos la función que recibe los números 'a' y 'b'.
-def euclides_extendido(a, b):
-
-    # Dentro del MCD 'a' como 'b' siempre tomaran su valor absoluto, asi que, los convertimos a positivos.
+def euclides_extendido(a: int, b: int) -> Tuple[int, int, int, List[Dict[str, int]], List[str]]:
+    """
+    Calcula el MCD(a, b) y los coeficientes x, y tales que ax + by = MCD(a, b).
+    
+    Returns:
+        Tuple:
+            - mcd (int): Máximo común divisor.
+            - x (int): Coeficiente de a.
+            - y (int): Coeficiente de b.
+            - tabla_pasos (List[Dict]): Pasos del algoritmo de Euclides.
+            - reconstruccion (List[str]): Pasos de la sustitución hacia atrás.
+    """
+    # Trabajamos con positivos para el algoritmo
     a_abs, b_abs = abs(a), abs(b)
-
-    # Almacenamos los residuos en una lista empezando por los dos números originales.
-    r = [a_abs, b_abs]
-    q_list = []
-
-    # Empezamos con las operaciones, asi que creamos un bucle que divide hasta que el último residuo agregado sea 0.
-    while r[-1] != 0:
-
-        # En esta parte dividimos el penúltimo residuo entre el último.
-        q_i, r_i = divmod(r[-2], r[-1])
-
-        # Y guardamos el cociente y el nuevo residuo.
-        q_list.append(q_i)
-        r.append(r_i)
-
-    # Ahora por el algoritmo de Euclides el MCD es el último residuo antes del 0, asi seleccionamos aquel número.
-    mcd = r[-2]
-    pasos_div = []
-
-    # Para seguir, creamos una lista de diccionarios con los pasos de las divisiones para la tabla. 
-    for i in range(len(q_list)):
-        pasos_div.append({'a': r[i], 'b': r[i+1], 'q': q_list[i], 'r': r[i+2]})
-
-    # Y realizamos los prcedimientos para realizar la sustitución hacia atras, creamos una lista vacia donde se guardaran las cadenas de texto que aplican el
-    # proceso paso a paso. 
-    recon = []
-
-    # Les otorgamos valores iniciales a las varialbles para rastrear los coheficientes.
-    x0, x1, y0, y1 = 1, 0, 0, 1
-
-    # Construimos el texto a través de un bucle.
-    if len(pasos_div) > 0:
-        for i in range(len(pasos_div) - 1):
-            curr_r = pasos_div[i]['r']
-            curr_a = pasos_div[i]['a']
-            curr_b = pasos_div[i]['b']
-            curr_q = pasos_div[i]['q']
-    # Esta sección recorre las divisiones que se hicieron previamente en el algoritmo de Euclides para generar la explicacion visual.       
-            q_val = q_list[i]
-            x0, x1 = x1, x0 - q_val * x1
-            y0, y1 = y1, y0 - q_val * y1
-    # Ahora, en cada paso de la división, los coheficientes se actualizan. Esta fórmula permite expresar cada residuo nuevo como una combinación de los
-    # anteriores.
-            if i == 0:
-                linea = f"{curr_r} = {curr_a} - {curr_q}({curr_b})"
-            else:
-                linea = f"{curr_r} = {curr_a} - {curr_q}({curr_b}) = ({x1})({a_abs}) + ({y1})({b_abs})"
-            
-            recon.append(linea)
-            
-    # Y finalmente calculamos los coheficientes finales. Este bucle es puro, pues este asegura el cálculo exacto de los valores y no el texto como el
-    # anterior.
-    x_final, x_next, y_final, y_next = 1, 0, 0, 1
-    temp_a, temp_b = a_abs, b_abs
-    while temp_b != 0:
-        q_v = temp_a // temp_b
-        temp_a, temp_b = temp_b, temp_a % temp_b
-        x_final, x_next = x_next, x_final - q_v * x_next
-        y_final, y_next = y_next, y_final - q_v * y_next
+    
+    r_vals = [a_abs, b_abs]
+    q_vals = []
+    
+    # Algoritmo de Euclides
+    while r_vals[-1] != 0:
+        q, r = divmod(r_vals[-2], r_vals[-1])
+        q_vals.append(q)
+        r_vals.append(r)
+    
+    mcd = r_vals[-2]
+    
+    # Generar tabla de pasos
+    tabla_pasos = []
+    # Los residuos relevantes son r_vals[0]...r_vals[-2] (el último es 0)
+    # len(q_vals) corresponde a las divisiones
+    for i in range(len(q_vals)):
+        tabla_pasos.append({
+            'a': r_vals[i],
+            'b': r_vals[i+1],
+            'q': q_vals[i],
+            'r': r_vals[i+2]
+        })
         
-    # Como trabajamos con valores absolutos, esta parte corrige los signos de x e ypara que la ecuación final sea correcta con los números originales.
-    x = x_final * (1 if a >= 0 else -1)
-    y = y_final * (1 if b >= 0 else -1)
+    # Algoritmo extendido iterativo puro para calcular x, y
+    x0, x1 = 1, 0
+    y0, y1 = 0, 1
+    
+    # Iteramos solo hasta el penúltimo paso para obtener coeficientes del MCD (último residuo no nulo).
+    # El último cociente corresponde a la división exacta que da residuo 0.
+    for q in q_vals[:-1]: 
+        x0, x1 = x1, x0 - q * x1
+        y0, y1 = y1, y0 - q * y1
+        
+    # x1 y y1 son los coeficientes para a_abs y b_abs
+    # mcd = a_abs * x1 + b_abs * y1
+    
+    # Ajustamos signos para a y b originales
+    signo_a = 1 if a >= 0 else -1
+    signo_b = 1 if b >= 0 else -1
+    
+    x_final = x1 * signo_a
+    y_final = y1 * signo_b
+    
+    # Generación de texto de reconstrucción (solo para fines educativos)
+    reconstruccion = []
+    if len(tabla_pasos) > 0:
+        # Reconstrucción didáctica paso a paso (simplificada)
+        for i, paso in enumerate(tabla_pasos):
+             reconstruccion.append(f"{paso['r']} = {paso['a']} - {paso['b']}({paso['q']})")
 
-    # Y finalmente, devolvimos los resultados.    
-    return mcd, x, y, pasos_div, recon
+    return mcd, x_final, y_final, tabla_pasos, reconstruccion
+
+# ECUACIONES DIOFÁNTICAS:
+
+def resolver_diofantica(a: int, b: int, c: int) -> Dict[str, Any]:
+    """
+    Resuelve la ecuación diofántica ax + by = c.
+
+    Returns:
+        Dict: Contiene:
+            - 'tiene_solucion' (bool)
+            - 'mcd' (int)
+            - 'x0', 'y0' (int): Solución particular (si existe).
+            - 'solucion_general' (str): Cadena descriptiva.
+            - 'verificacion' (str): Cadena de verificación.
+            - 'pasos_mcd' (List): Pasos de Euclides extendido.
+    """
+    mcd, x_part, y_part, pasos_mcd, recon = euclides_extendido(a, b)
+    
+    resultado = {
+        'tiene_solucion': False,
+        'mcd': mcd,
+        'pasos_mcd': pasos_mcd,
+        'reconstruccion_mcd': recon,
+        'a': a, 'b': b, 'c': c
+    }
+    
+    if c % mcd != 0:
+        return resultado
+    
+    resultado['tiene_solucion'] = True
+    
+    # Multiplicador para escalar la solución de ax + by = mcd a ax + by = c
+    factor = c // mcd
+    x0 = x_part * factor
+    y0 = y_part * factor
+    
+    resultado['x0'] = x0
+    resultado['y0'] = y0
+    
+    # Parametros de la solución general
+    # x = x0 + (b/d)n
+    # y = y0 - (a/d)n
+    k_x = b // mcd
+    k_y = a // mcd
+    
+    resultado['solucion_general'] = (
+        f"x = {x0} + ({k_x})n\n"
+        f"y = {y0} - ({k_y})n\n"
+        f"donde n ∈ ℤ"
+    )
+    
+    # Verificación con n=1
+    n = 1
+    x_ver = x0 + k_x * n
+    y_ver = y0 - k_y * n
+    
+    val_c = a * x_ver + b * y_ver
+    
+    resultado['verificacion'] = (
+        f"Para n=1:\n"
+        f"x = {x0} + ({k_x})(1) = {x_ver}\n"
+        f"y = {y0} - ({k_y})(1) = {y_ver}\n"
+        f"Comprobación: {a}({x_ver}) + {b}({y_ver}) = {a*x_ver} + {b*y_ver} = {val_c} (Igual a c={c})"
+    )
+    
+    return resultado
